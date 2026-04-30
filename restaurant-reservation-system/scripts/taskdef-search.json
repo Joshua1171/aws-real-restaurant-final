@@ -1,0 +1,41 @@
+{
+  "family": "restaurant-search-svc",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::218852528992:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::218852528992:role/restaurant-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "search-svc",
+      "image": "218852528992.dkr.ecr.us-east-1.amazonaws.com/restaurant-search-svc:latest",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 8081, "hostPort": 8081, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+        { "name": "AWS_REGION", "value": "us-east-1" },
+        { "name": "DYNAMODB_TABLE_NAME", "value": "restaurant-restaurants" },
+        { "name": "COGNITO_ISSUER_URI", "value": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_vWN5sL3ZG" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/restaurant-search-svc",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8081/actuator/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
