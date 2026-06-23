@@ -1,0 +1,10 @@
+logging:
+  level:
+    root: WARN
+    com.restaurant: INFO
+    software.amazon.awssdk: ERROR
+
+management:
+  endpoint:
+    health:
+      show-details: never

@@ -1,0 +1,228 @@
+### restaurant-payment-svc - IntelliJ HTTP Client
+### Selecciona env "local" arriba a la derecha. Ajusta {{jwt}} al iniciar.
+
+### -------------------------------------------------------------------
+### POST /api/v1/payments - Happy path (CREATE PENDING)
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+Accept-Language: en
+
+{
+  "reservationId": "res-001",
+  "restaurantId": "rest-001",
+  "amountCents": 250000,
+  "currency": "MXN",
+  "method": "CARD"
+}
+
+> {%
+client.test("201 Created", () => client.assert(response.status === 201));
+client.test("status=PENDING", () => client.assert(response.body.status === "PENDING"));
+client.global.set("paymentId", response.body.paymentId);
+%}
+
+### -------------------------------------------------------------------
+### POST - Error: currency invalida
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "reservationId": "res-001",
+  "restaurantId": "rest-001",
+  "amountCents": 100,
+  "currency": "pesos",
+  "method": "CARD"
+}
+
+> {%
+client.test("400 Bad Request", () => client.assert(response.status === 400));
+client.test("fields.currency presente", () => client.assert(response.body.fields.currency !== undefined));
+%}
+
+### -------------------------------------------------------------------
+### POST - Edge: sin Authorization
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments
+Content-Type: application/json
+
+{
+  "reservationId": "res-001",
+  "restaurantId": "rest-001",
+  "amountCents": 100,
+  "currency": "MXN",
+  "method": "CARD"
+}
+
+> {%
+client.test("401 Unauthorized", () => client.assert(response.status === 401));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/payments/{paymentId} - Happy path
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/payments/{{paymentId}}
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+%}
+
+### -------------------------------------------------------------------
+### GET - Error: 404
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/payments/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### GET - Edge: paymentId vacio
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/payments/
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404 (no match) o 405", () => client.assert([404, 405].includes(response.status)));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/payments/reservation/{reservationId} - Happy path
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/payments/reservation/res-001
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 array", () => {
+  client.assert(response.status === 200);
+  client.assert(Array.isArray(response.body));
+});
+%}
+
+### -------------------------------------------------------------------
+### GET por reserva - Error: sin JWT
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/payments/reservation/res-001
+
+> {%
+client.test("401", () => client.assert(response.status === 401));
+%}
+
+### -------------------------------------------------------------------
+### GET por reserva - Edge: reserva sin pagos -> array vacio
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/payments/reservation/no-existing-res
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 array vacio", () => {
+  client.assert(response.status === 200);
+  client.assert(response.body.length === 0);
+});
+%}
+
+### -------------------------------------------------------------------
+### POST /capture - Happy path
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments/{{paymentId}}/capture
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+client.test("status=CAPTURED", () => client.assert(response.body.status === "CAPTURED"));
+client.test("gatewayReference presente", () => client.assert(response.body.gatewayReference !== null));
+%}
+
+### -------------------------------------------------------------------
+### POST /capture - Error: ya capturado -> 409
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments/{{paymentId}}/capture
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("409 Conflict", () => client.assert(response.status === 409));
+%}
+
+### -------------------------------------------------------------------
+### POST /capture - Edge: pasarela rechaza (amount=13 dispara fallo simulado)
+### Crea primero un pago con amountCents=13 y luego prueba capturarlo.
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "reservationId": "res-trigger-fail",
+  "restaurantId": "rest-001",
+  "amountCents": 13,
+  "currency": "MXN",
+  "method": "CARD"
+}
+
+> {%
+client.test("201", () => client.assert(response.status === 201));
+client.global.set("failingPaymentId", response.body.paymentId);
+%}
+
+###
+POST {{baseUrl}}/api/v1/payments/{{failingPaymentId}}/capture
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("502 Bad Gateway", () => client.assert(response.status === 502));
+%}
+
+### -------------------------------------------------------------------
+### POST /refund - Happy path
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments/{{paymentId}}/refund
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "reason": "Cliente cancelo la reservacion"
+}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+client.test("status=REFUNDED", () => client.assert(response.body.status === "REFUNDED"));
+%}
+
+### -------------------------------------------------------------------
+### POST /refund - Error: ya REFUNDED -> 409
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments/{{paymentId}}/refund
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "reason": "Doble reembolso"
+}
+
+> {%
+client.test("409 Conflict", () => client.assert(response.status === 409));
+%}
+
+### -------------------------------------------------------------------
+### POST /refund - Edge: sin body
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/payments/some-id/refund
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404 (no existe) o 409 (estado invalido)", () => client.assert([404, 409].includes(response.status)));
+%}
+
+### -------------------------------------------------------------------
+### Health
+### -------------------------------------------------------------------
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("200", () => client.assert(response.status === 200));
+%}

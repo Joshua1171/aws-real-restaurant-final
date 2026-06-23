@@ -1,0 +1,141 @@
+{
+  "info": {
+    "name": "restaurant-reservation-svc",
+    "description": "Coleccion espejo de docs/requests.http. Variables {{baseUrl}}, {{jwt}}, {{restaurantId}}, {{reservationDatetime}} en environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Reservations",
+      "item": [
+        {
+          "name": "POST /reservations - Happy path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept-Language", "value": "en"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"restaurantId\": \"rest-001\",\n  \"reservationDatetime\": \"2026-05-10T19:30:00Z\",\n  \"partySize\": 4,\n  \"specialRequests\": \"Mesa cerca de la ventana\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.expect(pm.response.code).to.equal(201));",
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('reservationDatetime', j.reservationDatetime);",
+            "pm.collectionVariables.set('restaurantId', j.restaurantId);"
+          ]}}]
+        },
+        {
+          "name": "POST /reservations - Error: partySize fuera de rango",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"restaurantId\": \"rest-001\",\n  \"reservationDatetime\": \"2026-05-10T19:30:00Z\",\n  \"partySize\": 50\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('400 Bad Request', () => pm.expect(pm.response.code).to.equal(400));",
+            "pm.test('fields.partySize presente', () => pm.expect(pm.response.json().fields.partySize).to.exist);"
+          ]}}]
+        },
+        {
+          "name": "POST /reservations - Edge: sin Authorization",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"restaurantId\": \"rest-001\",\n  \"reservationDatetime\": \"2026-05-10T19:30:00Z\",\n  \"partySize\": 2\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('401 Unauthorized', () => pm.expect(pm.response.code).to.equal(401));"
+          ]}}]
+        },
+        {
+          "name": "GET /reservations/{a}/{b} - Happy path",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "{{restaurantId}}", "{{reservationDatetime}}"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200', () => pm.expect(pm.response.code).to.equal(200));"]}}]
+        },
+        {
+          "name": "GET /reservations/{a}/{b} - Error: 404",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/rest-not-existing/2099-01-01T00:00:00Z", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "rest-not-existing", "2099-01-01T00:00:00Z"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('404', () => pm.expect(pm.response.code).to.equal(404));"]}}]
+        },
+        {
+          "name": "GET /reservations/restaurant/{id} - Happy path",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/restaurant/{{restaurantId}}?startDatetime=2026-05-10T00:00:00Z&endDatetime=2026-05-10T23:59:59Z", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "restaurant", "{{restaurantId}}"], "query": [{"key": "startDatetime", "value": "2026-05-10T00:00:00Z"}, {"key": "endDatetime", "value": "2026-05-10T23:59:59Z"}]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200 array', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(Array.isArray(pm.response.json())).to.be.true; });"]}}]
+        },
+        {
+          "name": "GET /reservations/restaurant/{id} - Error: faltan params",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/restaurant/{{restaurantId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "restaurant", "{{restaurantId}}"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('400', () => pm.expect(pm.response.code).to.equal(400));"]}}]
+        },
+        {
+          "name": "PUT /confirm - Happy path",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}/confirm", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "{{restaurantId}}", "{{reservationDatetime}}", "confirm"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200', () => pm.expect(pm.response.code).to.equal(200));", "pm.test('CONFIRMED', () => pm.expect(pm.response.json().status).to.equal('CONFIRMED'));"]}}]
+        },
+        {
+          "name": "PUT /confirm - Error: 404",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/rest-not-existing/2099-01-01T00:00:00Z/confirm", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "rest-not-existing", "2099-01-01T00:00:00Z", "confirm"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('404', () => pm.expect(pm.response.code).to.equal(404));"]}}]
+        },
+        {
+          "name": "DELETE - Happy path (soft cancel)",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "reservations", "{{restaurantId}}", "{{reservationDatetime}}"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200 CANCELLED', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(pm.response.json().status).to.equal('CANCELLED'); });"]}}]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /actuator/health",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200', () => pm.expect(pm.response.code).to.equal(200));"]}}]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "restaurantId", "value": "rest-001"},
+    {"key": "reservationDatetime", "value": "2026-05-10T19:30:00Z"}
+  ]
+}

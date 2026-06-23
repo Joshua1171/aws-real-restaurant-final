@@ -1,0 +1,29 @@
+{
+  "Records": [
+    {
+      "eventID": "evt-001",
+      "eventName": "INSERT",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "us-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1746547200,
+        "Keys": {
+          "restaurant_id": {"S": "rest-001"},
+          "reservation_datetime": {"S": "2026-05-10T19:30:00Z"}
+        },
+        "NewImage": {
+          "restaurant_id": {"S": "rest-001"},
+          "reservation_datetime": {"S": "2026-05-10T19:30:00Z"},
+          "reservation_id": {"S": "abcd-1234"},
+          "user_id": {"S": "user-1"},
+          "party_size": {"N": "4"},
+          "status": {"S": "PENDING"}
+        },
+        "SequenceNumber": "111",
+        "SizeBytes": 256,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      }
+    }
+  ]
+}

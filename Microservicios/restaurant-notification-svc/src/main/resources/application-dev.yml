@@ -1,0 +1,10 @@
+logging:
+  level:
+    root: INFO
+    com.restaurant: DEBUG
+    io.awspring.cloud.sqs: INFO
+    software.amazon.awssdk: WARN
+
+aws:
+  sqs:
+    queue-name: restaurant-notifications-queue-dev

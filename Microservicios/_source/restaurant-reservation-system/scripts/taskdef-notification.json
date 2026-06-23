@@ -1,0 +1,41 @@
+{
+  "family": "restaurant-notification-svc",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::218852528992:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::218852528992:role/restaurant-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "notification-svc",
+      "image": "218852528992.dkr.ecr.us-east-1.amazonaws.com/restaurant-notification-svc:latest",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 8082, "hostPort": 8082, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "aws" },
+        { "name": "AWS_REGION", "value": "us-east-1" },
+        { "name": "SQS_QUEUE_NAME", "value": "restaurant-notifications-queue" },
+        { "name": "SES_SENDER_EMAIL", "value": "no-reply@restaurant-lab.com" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/restaurant-notification-svc",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8082/actuator/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

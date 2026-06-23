@@ -1,0 +1,15 @@
+logging:
+  level:
+    root: WARN
+    com.restaurant: INFO
+    software.amazon.awssdk: ERROR
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+spring:
+  cache:
+    caffeine:
+      spec: maximumSize=5000,expireAfterWrite=600s

@@ -1,0 +1,193 @@
+### restaurant-reservation-svc - IntelliJ HTTP Client
+### Selecciona env "local" en la esquina superior derecha. Ajusta {{jwt}} al iniciar.
+
+### -------------------------------------------------------------------
+### POST /api/v1/reservations - Happy path
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/reservations
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+Accept-Language: en
+
+{
+  "restaurantId": "rest-001",
+  "reservationDatetime": "2026-05-10T19:30:00Z",
+  "partySize": 4,
+  "specialRequests": "Mesa cerca de la ventana"
+}
+
+> {%
+client.test("201 Created", () => client.assert(response.status === 201));
+client.global.set("reservationDatetime", response.body.reservationDatetime);
+client.global.set("restaurantId", response.body.restaurantId);
+%}
+
+### -------------------------------------------------------------------
+### POST /api/v1/reservations - Error: partySize fuera de rango
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/reservations
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+Accept-Language: es
+
+{
+  "restaurantId": "rest-001",
+  "reservationDatetime": "2026-05-10T19:30:00Z",
+  "partySize": 50,
+  "specialRequests": null
+}
+
+> {%
+client.test("400 Bad Request", () => client.assert(response.status === 400));
+client.test("Tiene fields.partySize", () => client.assert(response.body.fields.partySize !== undefined));
+%}
+
+### -------------------------------------------------------------------
+### POST /api/v1/reservations - Edge: sin Authorization header
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/reservations
+Content-Type: application/json
+
+{
+  "restaurantId": "rest-001",
+  "reservationDatetime": "2026-05-10T19:30:00Z",
+  "partySize": 2
+}
+
+> {%
+client.test("401 Unauthorized", () => client.assert(response.status === 401));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/reservations/{restaurantId}/{reservationDatetime} - Happy path
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/reservations/{restaurantId}/{reservationDatetime} - Error: no existe
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/reservations/rest-not-existing/2099-01-01T00:00:00Z
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404 Not Found", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/reservations/{restaurantId}/{reservationDatetime} - Edge: datetime mal formado
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/reservations/rest-001/not-a-date
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404 (no match) o 400", () => client.assert([400, 404].includes(response.status)));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/reservations/restaurant/{restaurantId} - Happy path (rango)
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/reservations/restaurant/{{restaurantId}}?startDatetime=2026-05-10T00:00:00Z&endDatetime=2026-05-10T23:59:59Z
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+client.test("Es array", () => client.assert(Array.isArray(response.body)));
+%}
+
+### -------------------------------------------------------------------
+### GET .../restaurant/{id} - Error: faltan query params
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/reservations/restaurant/{{restaurantId}}
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("400 Bad Request", () => client.assert(response.status === 400));
+%}
+
+### -------------------------------------------------------------------
+### GET .../restaurant/{id} - Edge: rango invertido (start > end)
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/reservations/restaurant/{{restaurantId}}?startDatetime=2026-12-31T23:59:59Z&endDatetime=2026-01-01T00:00:00Z
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 con array vacio", () => {
+  client.assert(response.status === 200);
+  client.assert(response.body.length === 0);
+});
+%}
+
+### -------------------------------------------------------------------
+### PUT /api/v1/reservations/{a}/{b}/confirm - Happy path
+### -------------------------------------------------------------------
+PUT {{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}/confirm
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+client.test("status=CONFIRMED", () => client.assert(response.body.status === "CONFIRMED"));
+%}
+
+### -------------------------------------------------------------------
+### PUT .../confirm - Error: reserva inexistente
+### -------------------------------------------------------------------
+PUT {{baseUrl}}/api/v1/reservations/rest-not-existing/2099-01-01T00:00:00Z/confirm
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### PUT .../confirm - Edge: confirmar dos veces (idempotente esperado)
+### -------------------------------------------------------------------
+PUT {{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}/confirm
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+%}
+
+### -------------------------------------------------------------------
+### DELETE /api/v1/reservations/{a}/{b} - Happy path (cancelar)
+### -------------------------------------------------------------------
+DELETE {{baseUrl}}/api/v1/reservations/{{restaurantId}}/{{reservationDatetime}}
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+client.test("status=CANCELLED", () => client.assert(response.body.status === "CANCELLED"));
+%}
+
+### -------------------------------------------------------------------
+### DELETE - Error: ya cancelado / inexistente
+### -------------------------------------------------------------------
+DELETE {{baseUrl}}/api/v1/reservations/rest-not-existing/2099-01-01T00:00:00Z
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### DELETE - Edge: sin token
+### -------------------------------------------------------------------
+DELETE {{baseUrl}}/api/v1/reservations/rest-001/2026-05-10T19:30:00Z
+
+> {%
+client.test("401 Unauthorized", () => client.assert(response.status === 401));
+%}
+
+### -------------------------------------------------------------------
+### GET /actuator/health - publico
+### -------------------------------------------------------------------
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("200 OK", () => client.assert(response.status === 200));
+%}

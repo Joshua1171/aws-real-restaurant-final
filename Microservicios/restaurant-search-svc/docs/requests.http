@@ -1,0 +1,162 @@
+### restaurant-search-svc - IntelliJ HTTP Client
+
+### -------------------------------------------------------------------
+### POST /api/v1/restaurants - Happy path
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/restaurants
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "name": "La Bodeguita",
+  "description": "Cocina mexicana tradicional",
+  "city": "Toluca",
+  "address": "Av. Juarez 123",
+  "cuisineType": "MEXICAN",
+  "priceRange": "MODERATE",
+  "seatingCapacity": 40,
+  "openingHours": ["L-V 13:00-22:00", "S 12:00-23:00"],
+  "phone": "+5217221234567",
+  "email": "info@bodeguita.mx"
+}
+
+> {%
+client.test("201", () => client.assert(response.status === 201));
+client.global.set("restaurantId", response.body.restaurantId);
+%}
+
+### -------------------------------------------------------------------
+### POST - Error: priceRange invalido
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/restaurants
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "name": "X",
+  "city": "Toluca",
+  "address": "Calle 5",
+  "cuisineType": "MEXICAN",
+  "priceRange": "BARATO"
+}
+
+> {%
+client.test("400", () => client.assert(response.status === 400));
+client.test("fields.priceRange presente", () => client.assert(response.body.fields.priceRange !== undefined));
+%}
+
+### -------------------------------------------------------------------
+### POST - Edge: sin JWT
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/restaurants
+Content-Type: application/json
+
+{
+  "name": "X",
+  "city": "Toluca",
+  "address": "Calle 5",
+  "cuisineType": "MEXICAN",
+  "priceRange": "MODERATE"
+}
+
+> {%
+client.test("401", () => client.assert(response.status === 401));
+%}
+
+### -------------------------------------------------------------------
+### GET /restaurants/{id} - Happy path (publico)
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/restaurants/{{restaurantId}}
+
+> {%
+client.test("200", () => client.assert(response.status === 200));
+%}
+
+### -------------------------------------------------------------------
+### GET /restaurants/{id} - Error: 404
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/restaurants/00000000-0000-0000-0000-000000000000
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### GET /restaurants/{id} - Edge: id muy largo
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/restaurants/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### GET /search?city=... - Happy path
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/restaurants/search?city=Toluca
+
+> {%
+client.test("200 array", () => {
+  client.assert(response.status === 200);
+  client.assert(Array.isArray(response.body));
+});
+%}
+
+### -------------------------------------------------------------------
+### GET /search?city=... - Error: ciudad inexistente -> array vacio
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/restaurants/search?city=NoExiste
+
+> {%
+client.test("200 vacio", () => {
+  client.assert(response.status === 200);
+  client.assert(response.body.length === 0);
+});
+%}
+
+### -------------------------------------------------------------------
+### GET /search - Edge: sin parametro city -> 400
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/restaurants/search
+
+> {%
+client.test("400", () => client.assert(response.status === 400));
+%}
+
+### -------------------------------------------------------------------
+### DELETE - Happy path
+### -------------------------------------------------------------------
+DELETE {{baseUrl}}/api/v1/restaurants/{{restaurantId}}
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("204", () => client.assert(response.status === 204));
+%}
+
+### -------------------------------------------------------------------
+### DELETE - Error: no existe
+### -------------------------------------------------------------------
+DELETE {{baseUrl}}/api/v1/restaurants/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{jwt}}
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### DELETE - Edge: sin JWT
+### -------------------------------------------------------------------
+DELETE {{baseUrl}}/api/v1/restaurants/some-id
+
+> {%
+client.test("401", () => client.assert(response.status === 401));
+%}
+
+### -------------------------------------------------------------------
+### Health
+### -------------------------------------------------------------------
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("200", () => client.assert(response.status === 200));
+%}

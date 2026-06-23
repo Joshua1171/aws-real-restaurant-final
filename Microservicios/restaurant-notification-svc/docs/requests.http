@@ -1,0 +1,48 @@
+### restaurant-notification-svc - IntelliJ HTTP Client
+### Servicio interno: solo expone status/health.
+
+### -------------------------------------------------------------------
+### GET /api/v1/notifications/status - Happy path
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/notifications/status
+
+> {%
+client.test("200", () => client.assert(response.status === 200));
+client.test("status=UP", () => client.assert(response.body.status === "UP"));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/notifications/status - Error: ruta inexistente
+### -------------------------------------------------------------------
+GET {{baseUrl}}/api/v1/notifications/foo
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}
+
+### -------------------------------------------------------------------
+### GET /api/v1/notifications/status - Edge: metodo no permitido
+### -------------------------------------------------------------------
+POST {{baseUrl}}/api/v1/notifications/status
+
+> {%
+client.test("405", () => client.assert(response.status === 405));
+%}
+
+### -------------------------------------------------------------------
+### GET /actuator/health - Happy path
+### -------------------------------------------------------------------
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("200", () => client.assert(response.status === 200));
+%}
+
+### -------------------------------------------------------------------
+### GET /actuator/health - Edge: subpath inexistente
+### -------------------------------------------------------------------
+GET {{baseUrl}}/actuator/no-existe
+
+> {%
+client.test("404", () => client.assert(response.status === 404));
+%}

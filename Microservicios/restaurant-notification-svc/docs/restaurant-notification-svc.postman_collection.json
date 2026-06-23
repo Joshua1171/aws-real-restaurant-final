@@ -1,0 +1,60 @@
+{
+  "info": {
+    "name": "restaurant-notification-svc",
+    "description": "Coleccion espejo de docs/requests.http. Servicio interno -- solo health/status.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Status",
+      "item": [
+        {
+          "name": "GET /status - Happy path",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/notifications/status", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "status"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200', () => pm.expect(pm.response.code).to.equal(200));",
+            "pm.test('UP', () => pm.expect(pm.response.json().status).to.equal('UP'));"
+          ]}}]
+        },
+        {
+          "name": "GET /status - Error: ruta inexistente",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/notifications/foo", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "foo"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('404', () => pm.expect(pm.response.code).to.equal(404));"
+          ]}}]
+        },
+        {
+          "name": "POST /status - Edge: metodo no permitido",
+          "request": {
+            "method": "POST",
+            "url": {"raw": "{{baseUrl}}/api/v1/notifications/status", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "status"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('405', () => pm.expect(pm.response.code).to.equal(405));"
+          ]}}]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /actuator/health",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200', () => pm.expect(pm.response.code).to.equal(200));"
+          ]}}]
+        }
+      ]
+    }
+  ]
+}

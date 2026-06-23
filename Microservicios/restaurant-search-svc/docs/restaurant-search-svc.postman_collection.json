@@ -1,0 +1,110 @@
+{
+  "info": {
+    "name": "restaurant-search-svc",
+    "description": "Coleccion espejo de docs/requests.http.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Restaurants",
+      "item": [
+        {
+          "name": "POST /restaurants - Happy path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"La Bodeguita\",\n  \"description\": \"Cocina mexicana\",\n  \"city\": \"Toluca\",\n  \"address\": \"Av. Juarez 123\",\n  \"cuisineType\": \"MEXICAN\",\n  \"priceRange\": \"MODERATE\",\n  \"seatingCapacity\": 40,\n  \"openingHours\": [\"L-V 13:00-22:00\"]\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('201', () => pm.expect(pm.response.code).to.equal(201));",
+            "pm.collectionVariables.set('restaurantId', pm.response.json().restaurantId);"
+          ]}}]
+        },
+        {
+          "name": "POST - Error: priceRange invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"X\",\n  \"city\": \"Toluca\",\n  \"address\": \"Calle 5\",\n  \"cuisineType\": \"MEXICAN\",\n  \"priceRange\": \"BARATO\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('400', () => pm.expect(pm.response.code).to.equal(400));"
+          ]}}]
+        },
+        {
+          "name": "POST - Edge: sin JWT",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"X\",\n  \"city\": \"Toluca\",\n  \"address\": \"Calle 5\",\n  \"cuisineType\": \"MEXICAN\",\n  \"priceRange\": \"MODERATE\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('401', () => pm.expect(pm.response.code).to.equal(401));"
+          ]}}]
+        },
+        {
+          "name": "GET /restaurants/{id} - Happy path",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants/{{restaurantId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants", "{{restaurantId}}"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200', () => pm.expect(pm.response.code).to.equal(200));"]}}]
+        },
+        {
+          "name": "GET /restaurants/{id} - Error: 404",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants", "00000000-0000-0000-0000-000000000000"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('404', () => pm.expect(pm.response.code).to.equal(404));"]}}]
+        },
+        {
+          "name": "GET /search?city - Happy path",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants/search?city=Toluca", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants", "search"], "query": [{"key": "city", "value": "Toluca"}]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('200 array', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(Array.isArray(pm.response.json())).to.be.true; });"]}}]
+        },
+        {
+          "name": "GET /search - Edge: sin city -> 400",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants/search", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants", "search"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('400', () => pm.expect(pm.response.code).to.equal(400));"]}}]
+        },
+        {
+          "name": "DELETE - Happy path",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants/{{restaurantId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants", "{{restaurantId}}"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('204', () => pm.expect(pm.response.code).to.equal(204));"]}}]
+        },
+        {
+          "name": "DELETE - Error: 404",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/restaurants/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api", "v1", "restaurants", "00000000-0000-0000-0000-000000000000"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('404', () => pm.expect(pm.response.code).to.equal(404));"]}}]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "restaurantId", "value": ""}
+  ]
+}

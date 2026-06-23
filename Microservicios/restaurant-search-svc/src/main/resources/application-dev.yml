@@ -1,0 +1,9 @@
+logging:
+  level:
+    root: INFO
+    com.restaurant: DEBUG
+    software.amazon.awssdk: WARN
+
+aws:
+  dynamodb:
+    table-name: restaurant-restaurants-dev

@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "restaurant-payment-svc",
+    "description": "Coleccion espejo de docs/requests.http. Variables {{baseUrl}}, {{jwt}}, {{paymentId}}, {{failingPaymentId}} en environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "POST /payments - Happy path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"reservationId\": \"res-001\",\n  \"restaurantId\": \"rest-001\",\n  \"amountCents\": 250000,\n  \"currency\": \"MXN\",\n  \"method\": \"CARD\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.expect(pm.response.code).to.equal(201));",
+            "const j = pm.response.json();",
+            "pm.collectionVariables.set('paymentId', j.paymentId);"
+          ]}}]
+        },
+        {
+          "name": "POST /payments - Error: currency invalida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"reservationId\": \"res-001\",\n  \"restaurantId\": \"rest-001\",\n  \"amountCents\": 100,\n  \"currency\": \"pesos\",\n  \"method\": \"CARD\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('400', () => pm.expect(pm.response.code).to.equal(400));",
+            "pm.test('fields.currency presente', () => pm.expect(pm.response.json().fields.currency).to.exist);"
+          ]}}]
+        },
+        {
+          "name": "POST /payments - Edge: sin Authorization",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"reservationId\": \"res-001\",\n  \"restaurantId\": \"rest-001\",\n  \"amountCents\": 100,\n  \"currency\": \"MXN\",\n  \"method\": \"CARD\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/payments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('401', () => pm.expect(pm.response.code).to.equal(401));"
+          ]}}]
+        },
+        {
+          "name": "GET /payments/{id} - Happy path",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "{{paymentId}}"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200', () => pm.expect(pm.response.code).to.equal(200));"
+          ]}}]
+        },
+        {
+          "name": "GET /payments/{id} - Error: 404",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "00000000-0000-0000-0000-000000000000"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('404', () => pm.expect(pm.response.code).to.equal(404));"
+          ]}}]
+        },
+        {
+          "name": "GET /payments/reservation/{id} - Happy path",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/reservation/res-001", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "reservation", "res-001"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 array', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(Array.isArray(pm.response.json())).to.be.true; });"
+          ]}}]
+        },
+        {
+          "name": "GET /payments/reservation/{id} - Error: sin JWT",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/reservation/res-001", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "reservation", "res-001"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('401', () => pm.expect(pm.response.code).to.equal(401));"
+          ]}}]
+        },
+        {
+          "name": "GET /payments/reservation/{id} - Edge: array vacio",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/reservation/no-existing-res", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "reservation", "no-existing-res"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 vacio', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(pm.response.json().length).to.equal(0); });"
+          ]}}]
+        },
+        {
+          "name": "POST /capture - Happy path",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "{{paymentId}}", "capture"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 CAPTURED', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(pm.response.json().status).to.equal('CAPTURED'); });"
+          ]}}]
+        },
+        {
+          "name": "POST /capture - Error: ya CAPTURED",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "{{paymentId}}", "capture"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('409', () => pm.expect(pm.response.code).to.equal(409));"
+          ]}}]
+        },
+        {
+          "name": "POST /capture - Edge: pasarela rechaza (amount=13)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/{{failingPaymentId}}/capture", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "{{failingPaymentId}}", "capture"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('502 o 404 si no se preparo', () => pm.expect([502, 404]).to.include(pm.response.code));"
+          ]}}]
+        },
+        {
+          "name": "POST /refund - Happy path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"reason\": \"Cliente cancelo la reservacion\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refund", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "{{paymentId}}", "refund"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 REFUNDED', () => { pm.expect(pm.response.code).to.equal(200); pm.expect(pm.response.json().status).to.equal('REFUNDED'); });"
+          ]}}]
+        },
+        {
+          "name": "POST /refund - Error: ya REFUNDED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{jwt}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"reason\": \"Doble reembolso\"\n}"},
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refund", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "{{paymentId}}", "refund"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('409', () => pm.expect(pm.response.code).to.equal(409));"
+          ]}}]
+        },
+        {
+          "name": "POST /refund - Edge: id inexistente sin body",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{jwt}}"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/payments/some-id/refund", "host": ["{{baseUrl}}"], "path": ["api", "v1", "payments", "some-id", "refund"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('404 o 409', () => pm.expect([404, 409]).to.include(pm.response.code));"
+          ]}}]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /actuator/health",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"]}
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200', () => pm.expect(pm.response.code).to.equal(200));"
+          ]}}]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "paymentId", "value": ""},
+    {"key": "failingPaymentId", "value": ""}
+  ]
+}
